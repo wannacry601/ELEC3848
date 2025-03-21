@@ -53,8 +53,8 @@ int newDistance = 0;
 #define leftTriggerPin 32
 #define rightEchoPin 29
 #define rightTriggerPin 28
-#define fineLeftEchoPin 6
-#define fineLeftTriggerPin 7
+#define fineLeftEchoPin 48
+#define fineLeftTriggerPin 47
 #define fineRightEchoPin 45
 #define fineRightTriggerPin 44
 
@@ -230,8 +230,10 @@ void setup()
   pinMode(fineLeftTriggerPin, OUTPUT);
   pinMode(fineRightTriggerPin, OUTPUT);
 
+  Serial.println("pinmode setup complete");
+
   ///INA226 setup///
-  // Default INA226 address is 0x40
+  //Default INA226 address is 0x40
   ina.begin();
   // Configure INA226
   ina.configure(INA226_AVERAGES_16, INA226_BUS_CONV_TIME_2116US, INA226_SHUNT_CONV_TIME_2116US, INA226_MODE_SHUNT_BUS_CONT);
@@ -239,9 +241,11 @@ void setup()
   ina.calibrate(0.01, 4);
 
   Serial3.begin(9600); // BT serial setup
-  //Pan=PL4=>48, Tilt=PL5=>47
-   servo_pan.attach(48);
-   servo_tilt.attach(47);
+  // Pan=PL4=>48, Tilt=PL5=>47
+  servo_pan.attach(48);
+  servo_tilt.attach(47);
+
+  Serial.println("INA226 setup complete");
   //////////////////////////////////////////////
   //OLED Setup//////////////////////////////////
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
@@ -256,6 +260,7 @@ void setup()
   display.println("MIKU");
   display.display();
 
+  Serial.println("LED setup complete");
   //Servo setup
   pinMode(A0,INPUT);
   servo.attach(servoPin);
@@ -268,42 +273,7 @@ void setup()
   // left or right side to start
   delay(3000);
   ledprint();
-}
-
-void photoResistorCalibration() {
-  display.clearDisplay();
-  display.setTextSize(2);      // Normal 1:1 pixel scale
-  // display.setTextColor(SSD1306_WHITE); // Draw white text
-  display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(0,0);     // Start at top-left corner
-  display.println("Calibration");
-  display.clearDisplay();
-  int_adc0=analogRead(A0);   // Left sensor at ambient light intensity
-  int_adc1=analogRead(A1);   // Right sensor at ambient light intensity
-  display.print("Left : ");
-  display.println(int_adc0);
-  display.print("Right : ");
-  display.println(int_adc1);
-  delay(1000); 
-
-  display.clearDisplay();
-  display.println("Put fingers (~ 8 sec to set)......");
-  delay(5000);        // delay 5000 ms
-  display.clearDisplay();
-  display.println("START Calibration");
-
-  // measure the sensors reading at zero light intensity  
-  int_adc0_c=analogRead(A0);   // Left sensor at zero light intensity
-  int_adc1_c=analogRead(A1);   // Right sensor at zero light intensity
-
-  // calculate the slope of light intensity to ADC reading equations  
-  int_adc0_m=(int_adc0-int_adc0_c)/100;
-  int_adc1_m=(int_adc1-int_adc1_c)/100;
-  delay(10000);        // delay 10000 ms 
-  
-  display.clearDisplay();
-  display.println("COMPLETE");
+  Serial.println("GOOD");
 }
 
 void loop()
@@ -483,7 +453,7 @@ int measure_left_distance(){
   digitalWrite(leftTriggerPin, LOW);
   
   leftDuration = pulseIn(leftEchoPin, HIGH);
-  int leftD = (leftDuration/2.0) / 29.1;
+  int leftD = (leftDuration / 2.0) / 29.1;
 
   return leftD;
 }
@@ -514,7 +484,6 @@ int measure_fine_left_distance() {
   
   leftDuration = pulseIn(fineLeftEchoPin, HIGH);
   int leftD = (leftDuration / 2.0) / 29.1;
-  Serial.println(leftDuration);
   return leftD;
 }
 
@@ -544,17 +513,18 @@ void accurate_measure() { // The last measurement.
 
   // leftDistance = leftM / 3;
   // rightDistance = rightM / 3;
-  leftDistance = rightM / 3;
-  rightDistance = leftM / 3;
+  leftDistance = leftM / 3;
+  rightDistance = rightM / 3;
 }
 
 void measure() {
+  Serial.println("measure");
   int leftM = 0;
   int rightM = 0;
   int fineLeftM = 0;
   int fineRightM = 0;
 
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 3; i++) {
     leftM = leftM + measure_left_distance();
     rightM = rightM + measure_right_distance();
     fineLeftM = fineLeftM + measure_fine_left_distance();
@@ -562,18 +532,19 @@ void measure() {
     delay(20);
   }
 
-  leftDistance = rightM / 3;
-  rightDistance = leftM / 3;
+  leftDistance = leftM / 3;
+  rightDistance = rightM / 3;
   fineLeftDistance = fineLeftM / 3;
   fineRightDistance = fineRightM / 3;
 
-  int_left=(analogRead(A0)-int_adc0_c)/int_adc0_m;
-  int_right=(analogRead(A1)-int_adc1_c)/int_adc1_m; 
+  // int_left=(analogRead(A0)-int_adc0_c)/int_adc0_m;
+  // int_right=(analogRead(A1)-int_adc1_c)/int_adc1_m; 
 
   ledprint();
 }
 
 void ledprint() {
+  Serial.println("ledprint");
   display.clearDisplay();
   display.setTextSize(1);      // Normal 1:1 pixel scale
   // display.setTextColor(SSD1306_WHITE); // Draw white text
@@ -591,6 +562,10 @@ void ledprint() {
   display.println("");
   display.print("fright: ");
   display.print(fineRightDistance);
+  Serial.println(leftDistance);
+  Serial.println(rightDistance);
+  Serial.println(fineLeftDistance);
+  Serial.println(fineRightDistance);
   // display.println("");
   if (left) {
     display.print(" 2 right");
