@@ -1,14 +1,21 @@
+#include <Servo.h>
+
+#include <INA226.h>
+
 #include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <INA266.h>
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 
 INA226 ina;
+Servo servo;
 
+//TODO Bluetooth transmission
+//TODO rightleft/right ultrasonic
+//TODO charging data feedback
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     28 //4 // Reset pin # (or -1 if sharing Arduino reset pin)
@@ -37,13 +44,22 @@ int inDistance = 0;
 //forward distance measurement
 int averageDistance = 0;
 
+//Distance to the station
+int firstDistance = 0;
+int newDistance = 0;
 
 //Ultrasonic settings
 #define leftEchoPin 33
 #define leftTriggerPin 32
 #define rightEchoPin 29
 #define rightTriggerPin 28
+#define fineLeftEchoPin 6
+#define fineLeftTriggerPin 7
+#define fineRightEchoPin 45
+#define fineRightTriggerPin 44
 
+long fineLeftDistance;
+long fineRightDistance;
 long leftDistance;
 long rightDistance;
 
@@ -68,6 +84,9 @@ int MIN_VALUE = 300;
 #define PWMD 5    //Motor D PWM
 #define DIRD1 A4  //26  
 #define DIRD2 A5  //27  //Motor D Direction
+
+// Servo definition
+#define servoPin 41
 
 #define MOTORA_FORWARD(pwm)    do{digitalWrite(DIRA1,LOW); digitalWrite(DIRA2,HIGH);analogWrite(PWMA,pwm);}while(0)
 #define MOTORA_STOP(x)         do{digitalWrite(DIRA1,LOW); digitalWrite(DIRA2,LOW); analogWrite(PWMA,0);}while(0)
@@ -100,6 +119,9 @@ int MIN_VALUE = 300;
 #define MAX_PWM   2000
 #define MIN_PWM   300
 
+int upperLimit = 100;
+int fineThreshold = 100;
+
 int Motor_PWM = 1900;
 int A_PWM = 950; //left front
 int B_PWM = 1000; // right front
@@ -113,6 +135,14 @@ int B_rotate_PWM = 1000; // right front
 int C_rotate_PWM = 950; // left back
 int D_rotate_PWM = 950; // right back
 
+float targetShuntVoltage = 5.0;
+float currentShuntVoltage = 0;
+
+//variables for light intensity to ADC reading equations 
+int int_adc0, int_adc0_m, int_adc0_c;
+int int_adc1, int_adc1_m, int_adc1_c;     
+int int_left, int_right;
+
 // Supportive flags
 bool isParallel1 = false; // Parallel check at the beginning
 bool isParallel2 = false;
@@ -120,7 +150,6 @@ bool moveLeft = false;
 bool moveForward = false;
 bool left = false;
 bool right = false;
-bool isParalel3 = false;
 
 void BACK()
 {
@@ -194,8 +223,12 @@ void setup()
   //Ultrasonic serial setup
   pinMode(leftEchoPin, INPUT);
   pinMode(rightEchoPin, INPUT);
+  pinMode(fineLeftEchoPin, INPUT);
+  pinMode(fineRightEchoPin, INPUT);
   pinMode(leftTriggerPin, OUTPUT);
   pinMode(rightTriggerPin, OUTPUT);
+  pinMode(fineLeftTriggerPin, OUTPUT);
+  pinMode(fineRightTriggerPin, OUTPUT);
 
   ///INA226 setup///
   // Default INA226 address is 0x40
@@ -203,7 +236,7 @@ void setup()
   // Configure INA226
   ina.configure(INA226_AVERAGES_16, INA226_BUS_CONV_TIME_2116US, INA226_SHUNT_CONV_TIME_2116US, INA226_MODE_SHUNT_BUS_CONT);
   // Calibrate INA226. Rshunt = 0.0015 ohm, Max excepted current = 4A
-  ina.calibrate(0.0015, 4);
+  ina.calibrate(0.01, 4);
 
   Serial3.begin(9600); // BT serial setup
   //Pan=PL4=>48, Tilt=PL5=>47
@@ -223,56 +256,188 @@ void setup()
   display.println("MIKU");
   display.display();
 
+  //Servo setup
+  pinMode(A0,INPUT);
+  servo.attach(servoPin);
 
-  //Setup Voltage detector
-  pinMode(A0, INPUT);
+  //Photoresistor calibration
+  
 
   //First ultrasonic readings
   measure();
-  ledprint();
   // left or right side to start
-  if (leftDistance > rightDistance){
-      left = true;
-  }
-  else {
-      right = true;
-  }
   delay(3000);
+  ledprint();
 }
 
+void photoResistorCalibration() {
+  display.clearDisplay();
+  display.setTextSize(2);      // Normal 1:1 pixel scale
+  // display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  display.setCursor(0,0);     // Start at top-left corner
+  display.println("Calibration");
+  display.clearDisplay();
+  int_adc0=analogRead(A0);   // Left sensor at ambient light intensity
+  int_adc1=analogRead(A1);   // Right sensor at ambient light intensity
+  display.print("Left : ");
+  display.println(int_adc0);
+  display.print("Right : ");
+  display.println(int_adc1);
+  delay(1000); 
 
+  display.clearDisplay();
+  display.println("Put fingers (~ 8 sec to set)......");
+  delay(5000);        // delay 5000 ms
+  display.clearDisplay();
+  display.println("START Calibration");
+
+  // measure the sensors reading at zero light intensity  
+  int_adc0_c=analogRead(A0);   // Left sensor at zero light intensity
+  int_adc1_c=analogRead(A1);   // Right sensor at zero light intensity
+
+  // calculate the slope of light intensity to ADC reading equations  
+  int_adc0_m=(int_adc0-int_adc0_c)/100;
+  int_adc1_m=(int_adc1-int_adc1_c)/100;
+  delay(10000);        // delay 10000 ms 
+  
+  display.clearDisplay();
+  display.println("COMPLETE");
+}
 
 void loop()
 {
   measure();
-  delay(700);
-  // isParallel1 = (abs(leftDistance - rightDistance) <= 0) && !isParallel2;
-  //isParallel2 = (abs(leftDistance - rightDistance) <= 0) && isParallel1;
-  isParallel1 = (abs(leftDistance - rightDistance) <= 0);
-  if (!isParallel1) {
-    while (! (abs(leftDistance - rightDistance) <= 0)){
-      measure();
-      if (leftDistance > rightDistance) { //rotate left
-        rotate_right();
-        delay(30);
-      }
-      else {
-        rotate_left();
-        delay(30);
-      }
-      STOP();
-      measure();  
-      ledprint();
-      delay(1000);
+  while (fineLeftDistance < fineThreshold || fineRightDistance < fineThreshold || abs(leftDistance - rightDistance) > 2) {
+    measure();
+    if (leftDistance > rightDistance) { //rotate left
+      rotate_right();
+      delay(30);
     }
+    else {
+      rotate_left();
+      delay(30);
+    }
+    STOP();
+    measure();  
+    delay(700);
   }
+
   measure();
+  left = fineLeftDistance < fineRightDistance;
+  right = fineLeftDistance > fineRightDistance;
+  directionprint();
+  delay(5000);
   statusprint();
 
+  
+
   //left & right shift
-  outDistance = (leftDistance + rightDistance) / 2;
-  inDistance  = (leftDistance + rightDistance) / 2;
-  while (outDistance <= inDistance + 15){
+  inDistance = left ? rightDistance : leftDistance;
+  outDistance = left ? leftDistance : rightDistance;
+  firstDistance = (leftDistance + rightDistance) / 2;
+  while (true) {
+    while (!(abs(leftDistance - rightDistance) <= 1)){
+      if (leftDistance < rightDistance && abs(leftDistance - rightDistance) <=10) { 
+        rotate_left();
+        delay(20);
+      }
+      else {
+        rotate_right();
+        delay(20);
+      }
+      STOP();
+      measure();
+      delay(700);
+    }
+
+    if (rightDistance >= upperLimit) {
+      for (int i = 0;i < 3; i++) {
+        rotate_left();
+        delay(20);
+      }
+    }
+    if (leftDistance >= upperLimit) {
+      for (int i = 0;i < 3; i++) {
+        rotate_right();
+        delay(20);
+      }
+    }
+    if(left) {
+      RIGHT();
+    }
+    else if (right) {
+      LEFT();
+    }
+    else {
+      STOP();
+      display.clearDisplay();
+      display.println("error");
+    }
+    delay(50);
+    STOP();
+    ledprint();
+    delay(500);
+    measure();
+    inDistance = left ? rightDistance : leftDistance;
+    outDistance = left ? leftDistance : rightDistance;
+    
+    // determination of arrival
+    if (abs(inDistance - firstDistance) >= 8) {
+      newDistance = inDistance;
+      targetprint();
+    }
+
+    //termination
+    if (newDistance != 0 && abs(outDistance - newDistance) <= 2) {break;}
+  }
+  STOP();
+  delay(1000);
+  statusprint();
+
+  //Move forward
+  measure();
+  averageDistance = (leftDistance + rightDistance) / 2;
+  
+  currentShuntVoltage = ina.readShuntVoltage();
+  while(currentShuntVoltage < targetShuntVoltage){
+    ADVANCE();
+    delay(50);
+    STOP();
+
+    measure();
+    while (!(abs(leftDistance - rightDistance) <= 1)){
+      if (leftDistance < rightDistance && abs(leftDistance - rightDistance) <=10) { 
+        rotate_left();
+        delay(20);
+      }
+      else {
+        rotate_right();
+        delay(20);
+      }
+      STOP();
+      measure();
+      delay(200);
+    }
+
+    currentShuntVoltage = ina.readShuntVoltage();
+    voltageprint();
+    Serial3.println(currentShuntVoltage);
+  }
+  STOP();
+  statusprint();
+  delay(10000);
+
+  // Move back and park
+  accurate_measure();
+  averageDistance = (leftDistance + rightDistance) / 2;
+  while (averageDistance <= 8) {
+    BACK();
+    delay(50);
+    STOP();
+
+    measure();
     while (!(abs(leftDistance - rightDistance) <= 1)){
       if (leftDistance < rightDistance && abs(leftDistance - rightDistance) <=10) { 
         rotate_left();
@@ -286,57 +451,26 @@ void loop()
       measure();
       delay(500);
     }
-    if(left) {
-      RIGHT();
-    }
-    else {
-      LEFT();
-    }
-    delay(30);
-    STOP();
-    ledprint();
-    delay(500);
-    measure();
-    inDistance = leftDistance + rightDistance;
-  }
-  STOP();
 
-  //Move forward
-  measure();
-  averageDistance = (leftDistance + rightDistance) / 2;
-  targetShuntVoltage = 3.0; //TODO measure the shunt voltage when wireless charging is ready.
-  currentShuntVoltage = ina.readShuntVoltage();
-  while(averageDistance >= 8 || currentShuntVoltage < targetShuntVoltage){
-    ADVANCE();
-    delay(50);
-    STOP();
-    measure();
-    currentShuntVoltage = ina.readShuntVoltage()
+    accurate_measure();
   }
 
-  //final rotation
-  isParallel3 = (abs(leftDistance - rightDistance) == 0);
-  while (!isParallel3){
-    measure();
-    if (leftDistance > rightDistance) { //rotate left
-      rotate_right();
-      delay(5);
-     }
-    else {
-      rotate_left();
-      delay(5);
-    }
-    STOP();
-    measure();  
-    ledprint();
-    delay(1000);
-    isParallel3 = (abs(leftDistance - rightDistance) == 0);
-  }
-
-  
-  
-
-
+  // //final rotation
+  // while (!abs(leftDistance - rightDistance) == 0){
+  //   measure();
+  //   if (leftDistance > rightDistance) { //rotate left
+  //     rotate_right();
+  //     delay(5);
+  //    }
+  //   else {
+  //     rotate_left();
+  //     delay(5);
+  //   }
+  //   STOP();
+  //   measure();  
+  //   ledprint();
+  //   delay(1000);
+  // }
 }
 
 int measure_left_distance(){
@@ -369,25 +503,79 @@ int measure_right_distance() {
   return rightD;
 }
 
-void measure() {
+int measure_fine_left_distance() {
+  unsigned long leftDuration;
+
+  digitalWrite(fineLeftTriggerPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(fineLeftTriggerPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(fineLeftTriggerPin, LOW);
+  
+  leftDuration = pulseIn(fineLeftEchoPin, HIGH);
+  int leftD = (leftDuration / 2.0) / 29.1;
+  Serial.println(leftDuration);
+  return leftD;
+}
+
+int measure_fine_right_distance() {
+  unsigned long rightDuration;
+
+  digitalWrite(fineRightTriggerPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(fineRightTriggerPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(fineRightTriggerPin, LOW);
+  
+  rightDuration = pulseIn(fineRightEchoPin, HIGH);
+  int rightD = (rightDuration/2.0) / 29.1;
+  return rightD;
+}
+
+void accurate_measure() { // The last measurement.
   int leftM = 0;
   int rightM = 0;
 
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 3; i++) {
     leftM = leftM + measure_left_distance();
     rightM = rightM + measure_right_distance();
-    delay(200);
+    delay(100);
   }
 
   // leftDistance = leftM / 3;
   // rightDistance = rightM / 3;
   leftDistance = rightM / 3;
-  rightDistance = leftM/ 3;
-
+  rightDistance = leftM / 3;
 }
+
+void measure() {
+  int leftM = 0;
+  int rightM = 0;
+  int fineLeftM = 0;
+  int fineRightM = 0;
+
+  for (int i = 0; i < 2; i++) {
+    leftM = leftM + measure_left_distance();
+    rightM = rightM + measure_right_distance();
+    fineLeftM = fineLeftM + measure_fine_left_distance();
+    fineRightM = fineRightM + measure_fine_right_distance();
+    delay(20);
+  }
+
+  leftDistance = rightM / 3;
+  rightDistance = leftM / 3;
+  fineLeftDistance = fineLeftM / 3;
+  fineRightDistance = fineRightM / 3;
+
+  int_left=(analogRead(A0)-int_adc0_c)/int_adc0_m;
+  int_right=(analogRead(A1)-int_adc1_c)/int_adc1_m; 
+
+  ledprint();
+}
+
 void ledprint() {
   display.clearDisplay();
-  display.setTextSize(2);      // Normal 1:1 pixel scale
+  display.setTextSize(1);      // Normal 1:1 pixel scale
   // display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setTextColor(SSD1306_WHITE);
   display.cp437(true);         // Use full 256 char 'Code Page 437' font
@@ -397,6 +585,22 @@ void ledprint() {
   display.println("");
   display.print("right: ");
   display.print(rightDistance);
+  display.println("");
+  display.print("fleft: ");
+  display.print(fineLeftDistance);
+  display.println("");
+  display.print("fright: ");
+  display.print(fineRightDistance);
+  // display.println("");
+  if (left) {
+    display.print(" 2 right");
+  }
+  else if (right) {
+    display.println(" 2 left");
+  }
+  else {
+    display.println(" wtf");
+  }
   display.display();
 }
 
@@ -410,4 +614,42 @@ void statusprint() {
   display.println("stage finished");
   display.display();
   delay(5000);
+}
+
+void voltageprint() {
+  display.clearDisplay();
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  // display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  display.setCursor(0,0);     // Start at top-left corner
+  display.print("Shunt voltage: ");
+  display.println(currentShuntVoltage);
+}
+
+void targetprint() {
+  display.clearDisplay();
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  // display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  display.setCursor(0,0);     // Start at top-left corner
+  display.print("New distance found: ");
+  display.println(newDistance);
+  display.println("Original distance: ");
+  display.println(firstDistance);
+}
+
+void directionprint() {
+  display.clearDisplay();
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  // display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  display.setCursor(0,0);     // Start at top-left corner
+  display.print("fine left: ");
+  display.println(fineLeftDistance);
+  display.print("fine right: ");
+  display.println(fineRightDistance);
+  display.println(left);
 }
