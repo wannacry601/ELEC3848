@@ -409,6 +409,8 @@ void setup()
 
   //Setup Voltage detector
   pinMode(A0, INPUT);
+
+  Serial.println("GOOD");
 }
 
 void loop()

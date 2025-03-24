@@ -53,10 +53,10 @@ int newDistance = 0;
 #define leftTriggerPin 32
 #define rightEchoPin 29
 #define rightTriggerPin 28
-#define fineLeftEchoPin 48
-#define fineLeftTriggerPin 47
-#define fineRightEchoPin 45
-#define fineRightTriggerPin 44
+#define fineLeftEchoPin 41
+#define fineLeftTriggerPin 40
+#define fineRightEchoPin 10
+#define fineRightTriggerPin 11
 
 long fineLeftDistance;
 long fineRightDistance;
@@ -234,16 +234,20 @@ void setup()
 
   ///INA226 setup///
   //Default INA226 address is 0x40
-  ina.begin();
+  if (!ina.begin()) {
+    Serial.println("INA226 allocation failed");
+  }
   // Configure INA226
   ina.configure(INA226_AVERAGES_16, INA226_BUS_CONV_TIME_2116US, INA226_SHUNT_CONV_TIME_2116US, INA226_MODE_SHUNT_BUS_CONT);
+  Serial.println("2");
   // Calibrate INA226. Rshunt = 0.0015 ohm, Max excepted current = 4A
   ina.calibrate(0.01, 4);
+  Serial.println("3");
 
   Serial3.begin(9600); // BT serial setup
   // Pan=PL4=>48, Tilt=PL5=>47
-  servo_pan.attach(48);
-  servo_tilt.attach(47);
+  // servo_pan.attach(48);
+  // servo_tilt.attach(47);
 
   Serial.println("INA226 setup complete");
   //////////////////////////////////////////////
@@ -265,7 +269,6 @@ void setup()
   pinMode(A0,INPUT);
   servo.attach(servoPin);
 
-  //Photoresistor calibration
   
 
   //First ultrasonic readings
@@ -297,7 +300,6 @@ void loop()
   measure();
   left = fineLeftDistance < fineRightDistance;
   right = fineLeftDistance > fineRightDistance;
-  directionprint();
   delay(5000);
   statusprint();
 
@@ -356,7 +358,6 @@ void loop()
     // determination of arrival
     if (abs(inDistance - firstDistance) >= 8) {
       newDistance = inDistance;
-      targetprint();
     }
 
     //termination
@@ -392,7 +393,6 @@ void loop()
     }
 
     currentShuntVoltage = ina.readShuntVoltage();
-    voltageprint();
     Serial3.println(currentShuntVoltage);
   }
   STOP();
@@ -592,39 +592,12 @@ void statusprint() {
 }
 
 void voltageprint() {
-  display.clearDisplay();
-  display.setTextSize(1);      // Normal 1:1 pixel scale
-  // display.setTextColor(SSD1306_WHITE); // Draw white text
-  display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(0,0);     // Start at top-left corner
-  display.print("Shunt voltage: ");
-  display.println(currentShuntVoltage);
-}
-
-void targetprint() {
-  display.clearDisplay();
-  display.setTextSize(1);      // Normal 1:1 pixel scale
-  // display.setTextColor(SSD1306_WHITE); // Draw white text
-  display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(0,0);     // Start at top-left corner
-  display.print("New distance found: ");
-  display.println(newDistance);
-  display.println("Original distance: ");
-  display.println(firstDistance);
-}
-
-void directionprint() {
-  display.clearDisplay();
-  display.setTextSize(1);      // Normal 1:1 pixel scale
-  // display.setTextColor(SSD1306_WHITE); // Draw white text
-  display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(0,0);     // Start at top-left corner
-  display.print("fine left: ");
-  display.println(fineLeftDistance);
-  display.print("fine right: ");
-  display.println(fineRightDistance);
-  display.println(left);
+  // display.clearDisplay();
+  // display.setTextSize(1);      // Normal 1:1 pixel scale
+  // // display.setTextColor(SSD1306_WHITE); // Draw white text
+  // display.setTextColor(SSD1306_WHITE);
+  // display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  // display.setCursor(0,0);     // Start at top-left corner
+  // display.print("Shunt voltage: ");
+  // display.println(currentShuntVoltage);
 }
