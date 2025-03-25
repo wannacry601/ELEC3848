@@ -53,8 +53,10 @@ int newDistance = 0;
 #define leftTriggerPin 32
 #define rightEchoPin 29
 #define rightTriggerPin 28
-#define fineLeftEchoPin 41
-#define fineLeftTriggerPin 40
+#define fineLeftEchoPin 44
+#define fineLeftTriggerPin 45
+// #define fineLeftEchoPin 41
+// #define fineLeftTriggerPin 40
 #define fineRightEchoPin 10
 #define fineRightTriggerPin 11
 
@@ -150,6 +152,8 @@ bool moveLeft = false;
 bool moveForward = false;
 bool left = false;
 bool right = false;
+
+bool center = false;
 
 void BACK()
 {
@@ -282,148 +286,326 @@ void setup()
 void loop()
 {
   measure();
-  while (fineLeftDistance < fineThreshold || fineRightDistance < fineThreshold || abs(leftDistance - rightDistance) > 2) {
+  while(1){
     measure();
-    if (leftDistance > rightDistance) { //rotate left
-      rotate_right();
-      delay(30);
-    }
-    else {
-      rotate_left();
-      delay(30);
-    }
+    rotate_left();
+    delay(20);
     STOP();
-    measure();  
-    delay(700);
-  }
-
-  measure();
-  left = fineLeftDistance < fineRightDistance;
-  right = fineLeftDistance > fineRightDistance;
-  delay(5000);
-  statusprint();
-
-  
-
-  //left & right shift
-  inDistance = left ? rightDistance : leftDistance;
-  outDistance = left ? leftDistance : rightDistance;
-  firstDistance = (leftDistance + rightDistance) / 2;
-  while (true) {
-    while (!(abs(leftDistance - rightDistance) <= 1)){
-      if (leftDistance < rightDistance && abs(leftDistance - rightDistance) <=10) { 
-        rotate_left();
-        delay(20);
-      }
-      else {
-        rotate_right();
-        delay(20);
-      }
-      STOP();
-      measure();
-      delay(700);
-    }
-
-    if (rightDistance >= upperLimit) {
-      for (int i = 0;i < 3; i++) {
-        rotate_left();
-        delay(20);
-      }
-    }
-    if (leftDistance >= upperLimit) {
-      for (int i = 0;i < 3; i++) {
-        rotate_right();
-        delay(20);
-      }
-    }
-    if(left) {
-      RIGHT();
-    }
-    else if (right) {
+    if (abs(leftDistance - rightDistance) <= 2 && fineLeftDistance > fineThreshold && fineRightDistance > fineThreshold && leftDistance <= 100){
       LEFT();
-    }
-    else {
+      delay(30);
       STOP();
-      display.clearDisplay();
-      display.println("error");
+      if (abs(leftDistance - rightDistance) <= 2){
+          break;
+      }
     }
-    delay(50);
-    STOP();
-    ledprint();
     delay(500);
-    measure();
-    inDistance = left ? rightDistance : leftDistance;
-    outDistance = left ? leftDistance : rightDistance;
-    
-    // determination of arrival
-    if (abs(inDistance - firstDistance) >= 8) {
-      newDistance = inDistance;
-    }
-
-    //termination
-    if (newDistance != 0 && abs(outDistance - newDistance) <= 2) {break;}
   }
+
   STOP();
-  delay(1000);
   statusprint();
 
-  //Move forward
-  measure();
-  averageDistance = (leftDistance + rightDistance) / 2;
-  
-  currentShuntVoltage = ina.readShuntVoltage();
-  while(currentShuntVoltage < targetShuntVoltage){
+  //move forward
+  firstDistance = (leftDistance + rightDistance) / 2;
+  while(firstDistance >= 35){
     ADVANCE();
-    delay(50);
+    delay(20);
     STOP();
-
-    measure();
-    while (!(abs(leftDistance - rightDistance) <= 1)){
-      if (leftDistance < rightDistance && abs(leftDistance - rightDistance) <=10) { 
-        rotate_left();
-        delay(20);
-      }
-      else {
+    while((abs(leftDistance - rightDistance) >= 2)){
+      if (leftDistance > rightDistance){
         rotate_right();
         delay(20);
+        STOP();
+      }else{
+        rotate_left();
+        delay(20);
+        STOP();
       }
+      delay(500);
+      measure();
+    }
+    measure();
+    firstDistance = (leftDistance + rightDistance) / 2;
+
+  }
+
+  STOP();
+  statusprint();
+
+  //left and right move
+  firstDistance = (leftDistance + rightDistance) / 2;
+  while(1) {
+    measure();
+    LEFT();
+    delay(20);
+    STOP();
+    measure();
+    if (leftDistance <= rightDistance - 7){
+      right = true;
+      break;
+    }
+    if (leftDistance >= rightDistance + 7){
+      left = true;
+      break;
+    }
+    while((abs(leftDistance - rightDistance) >= 2)){
+      if (leftDistance > rightDistance){
+        rotate_right();
+        delay(20);
+        STOP();
+      }else{
+        rotate_left();
+        delay(20);
+        STOP();
+      }
+      while ((leftDistance + rightDistance)/2 <= 25) {
+        BACK();
+        delay(30);
+        STOP();
+        measure();
+      }
+      if (leftDistance > rightDistance){
+        rotate_right();
+        delay(20);
+        STOP();
+      }else{
+        rotate_left();
+        delay(20);
+        STOP();
+      }
+      while ((leftDistance + rightDistance)/2 >= 30) {
+        ADVANCE();
+        delay(30);
+        STOP();
+        measure();
+      }
+      delay(500);
+      measure();
+      if (leftDistance <= rightDistance - 7){
+        right = true;
+        break;
+      }
+      if (leftDistance >= rightDistance + 7){
+        left = true;
+        break;
+      }
+    }
+    newDistance = leftDistance;
+  }
+
+  if (!right) {
+    while(1){
+      measure();
+      RIGHT();
+      delay(20);
       STOP();
       measure();
-      delay(200);
+      if (rightDistance <= leftDistance - 7){
+        break;
+      }
+     while((abs(leftDistance - rightDistance) >= 2)){
+      while ((leftDistance + rightDistance)/2 <= 25) {
+        BACK();
+        delay(30);
+        STOP();
+        measure();
+      }
+      if (leftDistance > rightDistance){
+        rotate_right();
+        delay(20);
+        STOP();
+      }else{
+        rotate_left();
+        delay(20);
+        STOP();
+      }
+      while ((leftDistance + rightDistance)/2 >= 30) {
+        ADVANCE();
+        delay(30);
+        STOP();
+        measure();
+      }
+      delay(500);
+      measure();
+      if (rightDistance <= leftDistance - 7) {
+        break;
+      }
     }
-
-    currentShuntVoltage = ina.readShuntVoltage();
-    Serial3.println(currentShuntVoltage);
+    newDistance = rightDistance;
   }
   STOP();
   statusprint();
-  delay(10000);
+  measure();
+  if (left) {
+    for (int i = 0; i<=7; i++) {
+      RIGHT();
+      delay(20);
+      STOP();
+    }
+  }
+  else if (right) {
+    for (int i = 0; i<=7; i++) {
+      LEFT();
+      delay(20);
+      STOP();
+    }
+  }
+  else {
+    errorprint();
+  }
 
-  // Move back and park
-  accurate_measure();
-  averageDistance = (leftDistance + rightDistance) / 2;
-  while (averageDistance <= 8) {
-    BACK();
-    delay(50);
-    STOP();
-
-    measure();
-    while (!(abs(leftDistance - rightDistance) <= 1)){
-      if (leftDistance < rightDistance && abs(leftDistance - rightDistance) <=10) { 
-        rotate_left();
-        delay(20);
-      }
-      else {
+  while (ina.readShuntVoltage() <= 5.2 && (leftDistance + rightDistance) / 2 >= 3) {
+    while((abs(leftDistance - rightDistance) >= 2)){
+      if (leftDistance > rightDistance){
         rotate_right();
         delay(20);
+        STOP();
+      }else{
+        rotate_left();
+        delay(20);
+        STOP();
       }
-      STOP();
-      measure();
       delay(500);
+      measure();
     }
-
-    accurate_measure();
+    ADVANCE();
+    delay(20);
+    STOP();
+    measure();
   }
+  voltageprint();
+  delay(10000);
+  exitprint();
+}
+/////////////
+
+  // measure();
+  // left = fineLeftDistance < fineRightDistance;
+  // right = fineLeftDistance > fineRightDistance;
+  // delay(5000);
+  // statusprint();
+
+  
+
+  // //left & right shift
+  // inDistance = left ? rightDistance : leftDistance;
+  // outDistance = left ? leftDistance : rightDistance;
+  // firstDistance = (leftDistance + rightDistance) / 2;
+  // while (true) {
+  //   while (!(abs(leftDistance - rightDistance) <= 1)){
+  //     if (leftDistance < rightDistance && abs(leftDistance - rightDistance) <=10) { 
+  //       rotate_left();
+  //       delay(20);
+  //     }
+  //     else {
+  //       rotate_right();
+  //       delay(20);
+  //     }
+  //     STOP();
+  //     measure();
+  //     delay(700);
+  //   }
+
+  //   if (rightDistance >= upperLimit) {
+  //     for (int i = 0;i < 3; i++) {
+  //       rotate_left();
+  //       delay(20);
+  //     }
+  //   }
+  //   if (leftDistance >= upperLimit) {
+  //     for (int i = 0;i < 3; i++) {
+  //       rotate_right();
+  //       delay(20);
+  //     }
+  //   }
+  //   if(left) {
+  //     RIGHT();
+  //   }
+  //   else if (right) {
+  //     LEFT();
+  //   }
+  //   else {
+  //     STOP();
+  //     display.clearDisplay();
+  //     display.println("error");
+  //   }
+  //   delay(50);
+  //   STOP();
+  //   ledprint();
+  //   delay(500);
+  //   measure();
+  //   inDistance = left ? rightDistance : leftDistance;
+  //   outDistance = left ? leftDistance : rightDistance;
+    
+  //   // determination of arrival
+  //   if (abs(inDistance - firstDistance) >= 8) {
+  //     newDistance = inDistance;
+  //   }
+
+  //   //termination
+  //   if (newDistance != 0 && abs(outDistance - newDistance) <= 2) {break;}
+  // }
+  // STOP();
+  // delay(1000);
+  // statusprint();
+
+  // //Move forward
+  // measure();
+  // averageDistance = (leftDistance + rightDistance) / 2;
+  
+  // currentShuntVoltage = ina.readShuntVoltage();
+  // while(currentShuntVoltage < targetShuntVoltage){
+  //   ADVANCE();
+  //   delay(50);
+  //   STOP();
+
+  //   measure();
+  //   while (!(abs(leftDistance - rightDistance) <= 1)){
+  //     if (leftDistance < rightDistance && abs(leftDistance - rightDistance) <=10) { 
+  //       rotate_left();
+  //       delay(20);
+  //     }
+  //     else {
+  //       rotate_right();
+  //       delay(20);
+  //     }
+  //     STOP();
+  //     measure();
+  //     delay(200);
+  //   }
+
+  //   currentShuntVoltage = ina.readShuntVoltage();
+  //   Serial3.println(currentShuntVoltage);
+  // }
+  // STOP();
+  // statusprint();
+  // delay(10000);
+
+  // // Move back and park
+  // accurate_measure();
+  // averageDistance = (leftDistance + rightDistance) / 2;
+  // while (averageDistance <= 8) {
+  //   BACK();
+  //   delay(50);
+  //   STOP();
+
+  //   measure();
+  //   while (!(abs(leftDistance - rightDistance) <= 1)){
+  //     if (leftDistance < rightDistance && abs(leftDistance - rightDistance) <=10) { 
+  //       rotate_left();
+  //       delay(20);
+  //     }
+  //     else {
+  //       rotate_right();
+  //       delay(20);
+  //     }
+  //     STOP();
+  //     measure();
+  //     delay(500);
+  //   }
+
+  //   accurate_measure();
+  // }
 
   // //final rotation
   // while (!abs(leftDistance - rightDistance) == 0){
@@ -441,6 +623,7 @@ void loop()
   //   ledprint();
   //   delay(1000);
   // }
+  ////////////
 }
 
 int measure_left_distance(){
@@ -481,7 +664,7 @@ int measure_fine_left_distance() {
   digitalWrite(fineLeftTriggerPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(fineLeftTriggerPin, LOW);
-  
+  Serial.println(leftDuration);
   leftDuration = pulseIn(fineLeftEchoPin, HIGH);
   int leftD = (leftDuration / 2.0) / 29.1;
   return leftD;
@@ -497,7 +680,8 @@ int measure_fine_right_distance() {
   digitalWrite(fineRightTriggerPin, LOW);
   
   rightDuration = pulseIn(fineRightEchoPin, HIGH);
-  int rightD = (rightDuration/2.0) / 29.1;
+  int rightD = (rightDuration / 2.0) / 29.1;
+
   return rightD;
 }
 
@@ -562,10 +746,10 @@ void ledprint() {
   display.println("");
   display.print("fright: ");
   display.print(fineRightDistance);
-  Serial.println(leftDistance);
-  Serial.println(rightDistance);
-  Serial.println(fineLeftDistance);
-  Serial.println(fineRightDistance);
+  // Serial.println(leftDistance);
+  // Serial.println(rightDistance);
+  // Serial.println(fineLeftDistance);
+  // Serial.println(fineRightDistance);
   // display.println("");
   if (left) {
     display.print(" 2 right");
@@ -591,13 +775,37 @@ void statusprint() {
   delay(5000);
 }
 
+void exitprint() {
+  display.clearDisplay();
+  display.setTextSize(2);      // Normal 1:1 pixel scale
+  // display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  display.setCursor(0,0);     // Start at top-left corner
+  display.println("EXIT");
+  display.display();
+  delay(10000);
+}
+
 void voltageprint() {
-  // display.clearDisplay();
-  // display.setTextSize(1);      // Normal 1:1 pixel scale
-  // // display.setTextColor(SSD1306_WHITE); // Draw white text
-  // display.setTextColor(SSD1306_WHITE);
-  // display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  // display.setCursor(0,0);     // Start at top-left corner
-  // display.print("Shunt voltage: ");
-  // display.println(currentShuntVoltage);
+  display.clearDisplay();
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  // display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  display.setCursor(0,0);     // Start at top-left corner
+  display.print("Shunt voltage: ");
+  display.println(currentShuntVoltage);
+}
+
+void errorprint() {
+  display.clearDisplay();
+  display.setTextSize(2);      // Normal 1:1 pixel scale
+  // display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  display.setCursor(0,0);     // Start at top-left corner
+  display.println("ERROR");
+  display.display();
+  delay(10000);
 }
