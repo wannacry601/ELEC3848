@@ -1,14 +1,12 @@
 #include <Servo.h>
-
 #include <INA226.h>
-
 #include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+#define SCREEN_WIDTH 128  // OLED display width, in pixels
+#define SCREEN_HEIGHT 32  // OLED display height, in pixels
 
 INA226 ina;
 Servo servo;
@@ -18,9 +16,9 @@ Servo servo;
 //TODO charging data feedback
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define OLED_RESET     28 //4 // Reset pin # (or -1 if sharing Arduino reset pin)
+#define OLED_RESET 28  //4 // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-int oldV=1, newV=0;
+int oldV = 1, newV = 0;
 #include <SoftwareSerial.h>
 //UNO: (2, 3)
 //SoftwareSerial mySerial(4, 6); // RX, TX
@@ -35,7 +33,7 @@ Servo servo_tilt;
 int servo_min = 20;
 int servo_max = 160;
 
-int count = 0;//begin delay
+int count = 0;  //begin delay
 
 //first distance
 int outDistance = 0;
@@ -68,85 +66,146 @@ long rightDistance;
 unsigned long time;
 unsigned long timem;
 
+
 //FaBoPWM faboPWM;
 int pos = 0;
 int MAX_VALUE = 2000;
 int MIN_VALUE = 300;
 
 // Define motor pins
-#define PWMA 12    //Motor A PWM
+#define PWMA 12  //Motor A PWM
 #define DIRA1 34
 #define DIRA2 35  //Motor A Direction
 #define PWMB 8    //Motor B PWM
 #define DIRB1 37
 #define DIRB2 36  //Motor B Direction
-#define PWMC 9   //Motor C PWM --> from 6 to 9
+#define PWMC 9    //Motor C PWM --> from 6 to 9
 #define DIRC1 43
 #define DIRC2 42  //Motor C Direction
 #define PWMD 5    //Motor D PWM
-#define DIRD1 A4  //26  
+#define DIRD1 A4  //26
 #define DIRD2 A5  //27  //Motor D Direction
 
 // Servo definition
 #define servoPin 41
 
-#define MOTORA_FORWARD(pwm)    do{digitalWrite(DIRA1,LOW); digitalWrite(DIRA2,HIGH);analogWrite(PWMA,pwm);}while(0)
-#define MOTORA_STOP(x)         do{digitalWrite(DIRA1,LOW); digitalWrite(DIRA2,LOW); analogWrite(PWMA,0);}while(0)
-#define MOTORA_BACKOFF(pwm)    do{digitalWrite(DIRA1,HIGH);digitalWrite(DIRA2,LOW); analogWrite(PWMA,pwm);}while(0)
+#define MOTORA_FORWARD(pwm) \
+  do { \
+    digitalWrite(DIRA1, LOW); \
+    digitalWrite(DIRA2, HIGH); \
+    analogWrite(PWMA, pwm); \
+  } while (0)
+#define MOTORA_STOP(x) \
+  do { \
+    digitalWrite(DIRA1, LOW); \
+    digitalWrite(DIRA2, LOW); \
+    analogWrite(PWMA, 0); \
+  } while (0)
+#define MOTORA_BACKOFF(pwm) \
+  do { \
+    digitalWrite(DIRA1, HIGH); \
+    digitalWrite(DIRA2, LOW); \
+    analogWrite(PWMA, pwm); \
+  } while (0)
 
-#define MOTORB_BACKOFF(pwm)    do{digitalWrite(DIRB1,LOW); digitalWrite(DIRB2,HIGH);analogWrite(PWMB,pwm);}while(0)
-#define MOTORB_STOP(x)         do{digitalWrite(DIRB1,LOW); digitalWrite(DIRB2,LOW); analogWrite(PWMB,0);}while(0)
-#define MOTORB_FORWARD(pwm)    do{digitalWrite(DIRB1,HIGH);digitalWrite(DIRB2,LOW); analogWrite(PWMB,pwm);}while(0)
+#define MOTORB_BACKOFF(pwm) \
+  do { \
+    digitalWrite(DIRB1, LOW); \
+    digitalWrite(DIRB2, HIGH); \
+    analogWrite(PWMB, pwm); \
+  } while (0)
+#define MOTORB_STOP(x) \
+  do { \
+    digitalWrite(DIRB1, LOW); \
+    digitalWrite(DIRB2, LOW); \
+    analogWrite(PWMB, 0); \
+  } while (0)
+#define MOTORB_FORWARD(pwm) \
+  do { \
+    digitalWrite(DIRB1, HIGH); \
+    digitalWrite(DIRB2, LOW); \
+    analogWrite(PWMB, pwm); \
+  } while (0)
 
-#define MOTORC_FORWARD(pwm)    do{digitalWrite(DIRC1,LOW); digitalWrite(DIRC2,HIGH);analogWrite(PWMC,pwm);}while(0)
-#define MOTORC_STOP(x)         do{digitalWrite(DIRC1,LOW); digitalWrite(DIRC2,LOW); analogWrite(PWMC,0);}while(0)
-#define MOTORC_BACKOFF(pwm)    do{digitalWrite(DIRC1,HIGH);digitalWrite(DIRC2,LOW); analogWrite(PWMC,pwm);}while(0)
+#define MOTORC_FORWARD(pwm) \
+  do { \
+    digitalWrite(DIRC1, LOW); \
+    digitalWrite(DIRC2, HIGH); \
+    analogWrite(PWMC, pwm); \
+  } while (0)
+#define MOTORC_STOP(x) \
+  do { \
+    digitalWrite(DIRC1, LOW); \
+    digitalWrite(DIRC2, LOW); \
+    analogWrite(PWMC, 0); \
+  } while (0)
+#define MOTORC_BACKOFF(pwm) \
+  do { \
+    digitalWrite(DIRC1, HIGH); \
+    digitalWrite(DIRC2, LOW); \
+    analogWrite(PWMC, pwm); \
+  } while (0)
 
-#define MOTORD_BACKOFF(pwm)    do{digitalWrite(DIRD1,LOW); digitalWrite(DIRD2,HIGH);analogWrite(PWMD,pwm);}while(0)
-#define MOTORD_STOP(x)         do{digitalWrite(DIRD1,LOW); digitalWrite(DIRD2,LOW); analogWrite(PWMD,0);}while(0)
-#define MOTORD_FORWARD(pwm)    do{digitalWrite(DIRD1,HIGH);digitalWrite(DIRD2,LOW); analogWrite(PWMD,pwm);}while(0)
+#define MOTORD_BACKOFF(pwm) \
+  do { \
+    digitalWrite(DIRD1, LOW); \
+    digitalWrite(DIRD2, HIGH); \
+    analogWrite(PWMD, pwm); \
+  } while (0)
+#define MOTORD_STOP(x) \
+  do { \
+    digitalWrite(DIRD1, LOW); \
+    digitalWrite(DIRD2, LOW); \
+    analogWrite(PWMD, 0); \
+  } while (0)
+#define MOTORD_FORWARD(pwm) \
+  do { \
+    digitalWrite(DIRD1, HIGH); \
+    digitalWrite(DIRD2, LOW); \
+    analogWrite(PWMD, pwm); \
+  } while (0)
 
-#define SERIAL  Serial
+#define SERIAL Serial
 #define BTSERIAL Serial3
 
 #define LOG_DEBUG
 
 #ifdef LOG_DEBUG
-  #define M_LOG SERIAL.print
+#define M_LOG SERIAL.print
 #else
-  #define M_LOG BTSERIAL.println
+#define M_LOG BTSERIAL.println
 #endif
 
 //PWM Definition
-#define MAX_PWM   2000
-#define MIN_PWM   300
+#define MAX_PWM 2000
+#define MIN_PWM 300
 
 int upperLimit = 100;
 int fineThreshold = 100;
 
 int Motor_PWM = 1900;
-int A_PWM = 950; //left front
-int B_PWM = 1000; // right front
-int C_PWM = 950; // left back
-int D_PWM = 950; // right back
+int A_PWM = 1200;   //left front
+int B_PWM = 1200;  // right front
+int C_PWM = 1200;   // left back
+int D_PWM = 1200;   // right back
 
 // Rotation needs different duty cycles
 // TODO test optimal duty cycles for rotation
-int A_rotate_PWM = 950; //left front
-int B_rotate_PWM = 1000; // right front
-int C_rotate_PWM = 950; // left back
-int D_rotate_PWM = 950; // right back
+int A_rotate_PWM = 1200;   //left front
+int B_rotate_PWM = 1200;  // right front
+int C_rotate_PWM = 1200;   // left back
+int D_rotate_PWM = 1200;   // right back
 
 float targetShuntVoltage = 5.0;
 float currentShuntVoltage = 0;
 
-//variables for light intensity to ADC reading equations 
+//variables for light intensity to ADC reading equations
 int int_adc0, int_adc0_m, int_adc0_c;
-int int_adc1, int_adc1_m, int_adc1_c;     
+int int_adc1, int_adc1_m, int_adc1_c;
 int int_left, int_right;
 
 // Supportive flags
-bool isParallel1 = false; // Parallel check at the beginning
+bool isParallel1 = false;  // Parallel check at the beginning
 bool isParallel2 = false;
 bool moveLeft = false;
 bool moveForward = false;
@@ -155,24 +214,21 @@ bool right = false;
 
 bool center = false;
 
-void BACK()
-{
-  MOTORA_BACKOFF(A_PWM); 
+void BACK() {
+  MOTORA_BACKOFF(A_PWM);
   MOTORB_BACKOFF(B_PWM);
-  MOTORC_BACKOFF(C_PWM); 
+  MOTORC_BACKOFF(C_PWM);
   MOTORD_BACKOFF(D_PWM);
 }
 
-void ADVANCE()
-{
-  MOTORA_FORWARD(A_PWM); 
+void ADVANCE() {
+  MOTORA_FORWARD(A_PWM);
   MOTORB_FORWARD(B_PWM);
-  MOTORC_FORWARD(C_PWM); 
+  MOTORC_FORWARD(C_PWM);
   MOTORD_FORWARD(D_PWM);
 }
 
-void LEFT()
-{
+void LEFT() {
   MOTORA_BACKOFF(A_PWM);
   MOTORB_FORWARD(B_PWM);
   MOTORC_FORWARD(C_PWM);
@@ -190,11 +246,10 @@ void RIGHT() {
 //     | ↙ ↖ |
 //     | ↘ ↗ |
 //    ↓C-----D↑
-void rotate_left()
-{
-  MOTORA_BACKOFF(A_rotate_PWM); 
+void rotate_left() {
+  MOTORA_BACKOFF(A_rotate_PWM);
   MOTORB_FORWARD(B_rotate_PWM);
-  MOTORC_BACKOFF(C_rotate_PWM); 
+  MOTORC_BACKOFF(C_rotate_PWM);
   MOTORD_FORWARD(D_rotate_PWM);
 }
 
@@ -202,27 +257,24 @@ void rotate_left()
 //     | ↗ ↘ |
 //     | ↖ ↙ |
 //    ↑C-----D↓
-void rotate_right()
-{
+void rotate_right() {
   MOTORA_FORWARD(A_rotate_PWM);
   MOTORB_BACKOFF(B_rotate_PWM);
   MOTORC_FORWARD(C_rotate_PWM);
   MOTORD_BACKOFF(D_rotate_PWM);
 }
 
-void STOP()
-{
+void STOP() {
   MOTORA_STOP(A_PWM);
   MOTORB_STOP(B_PWM);
   MOTORC_STOP(C_PWM);
   MOTORD_STOP(D_PWM);
-} 
+}
 
-void setup()
-{
-  SERIAL.begin(115200); // USB serial setup
+void setup() {
+  SERIAL.begin(115200);  // USB serial setup
   SERIAL.println("Start");
-  STOP(); // Stop the robot
+  STOP();  // Stop the robot
 
   //Ultrasonic serial setup
   pinMode(leftEchoPin, INPUT);
@@ -248,7 +300,14 @@ void setup()
   ina.calibrate(0.01, 4);
   Serial.println("3");
 
-  Serial3.begin(9600); // BT serial setup
+  // while (1) {
+  //   if (Serial3.available()) {
+  //     Serial.println("Bluetooth connected");
+  //     break;
+  //   }
+  // }
+  Serial3.begin(115200);  // BT serial setup
+
   // Pan=PL4=>48, Tilt=PL5=>47
   // servo_pan.attach(48);
   // servo_tilt.attach(47);
@@ -256,48 +315,45 @@ void setup()
   Serial.println("INA226 setup complete");
   //////////////////////////////////////////////
   //OLED Setup//////////////////////////////////
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {  // Address 0x3C for 128x32
     Serial.println(F("SSD1306 allocation failed"));
   }
   display.clearDisplay();
-  display.setTextSize(2);      // Normal 1:1 pixel scale
+  display.setTextSize(2);  // Normal 1:1 pixel scale
   // display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(40, 10);     // Start at top-left corner
+  display.cp437(true);        // Use full 256 char 'Code Page 437' font
+  display.setCursor(40, 10);  // Start at top-left corner
   display.println("MIKU");
   display.display();
 
   Serial.println("LED setup complete");
   //Servo setup
-  pinMode(A0,INPUT);
+  pinMode(A0, INPUT);
   servo.attach(servoPin);
 
-  
+
 
   //First ultrasonic readings
   measure();
   // left or right side to start
-  delay(3000);
+  delay(1000);
   ledprint();
   Serial.println("GOOD");
 }
 
-void loop()
-{
+void loop() {
   measure();
-  while(1){
+  while (1) {
     measure();
     rotate_left();
     delay(20);
     STOP();
-    if (abs(leftDistance - rightDistance) <= 2 && fineLeftDistance > fineThreshold && fineRightDistance > fineThreshold && leftDistance <= 100){
-      LEFT();
-      delay(30);
-      STOP();
-      if (abs(leftDistance - rightDistance) <= 2){
-          break;
-      }
+    if (abs(leftDistance - rightDistance) <= 2 && leftDistance <= 100 && fineLeftDistance >= fineThreshold && fineRightDistance >= fineThreshold) {
+      // LEFT();
+      // delay(30);
+      // STOP();
+      break;
     }
     delay(50);
   }
@@ -306,27 +362,25 @@ void loop()
   statusprint(1);
 
   //move forward
-  firstDistance = (leftDistance + rightDistance) / 2;
-  while(firstDistance >= 35){
+  while ((leftDistance + rightDistance) / 2 >= 50) {
     ADVANCE();
     delay(30);
     STOP();
-    while((abs(leftDistance - rightDistance) >= 2)){
-      if (leftDistance > rightDistance){
-        rotate_right();
-        delay(10);
-        STOP();
-      }else{
-        rotate_left();
-        delay(10);
-        STOP();
-      }
-      delay(30);
-      measure();
-    }
+    // while ((abs(leftDistance - rightDistance) >= 2)) {
+    // if (leftDistance > rightDistance) {
+    //   rotate_right();
+    //   delay(10);
+    //   STOP();
+    // } else {
+    //   rotate_left();
+    //   delay(10);
+    //   STOP();
+    // }
+    //   delay(30);
+    //   measure();
+    // }
     measure();
-    firstDistance = (leftDistance + rightDistance) / 2;
-
+    delay(40);
   }
 
   STOP();
@@ -334,90 +388,41 @@ void loop()
 
   //left and right move
   firstDistance = (leftDistance + rightDistance) / 2;
-  while(1) {
+  while (1) {
     measure();
-    LEFT();
-    delay(40);
-    STOP();
-    measure();
-    if (leftDistance <= rightDistance - 7){
+    if (leftDistance <= rightDistance - 7) {
       right = true;
       break;
     }
-    if (leftDistance >= rightDistance + 7){
+    if (leftDistance >= rightDistance + 7) {
       left = true;
       break;
     }
-    while((abs(leftDistance - rightDistance) >= 2)){
-      if (leftDistance > rightDistance){
+    while ((abs(leftDistance - rightDistance) >= 2)) {
+      if (leftDistance > rightDistance) {
         rotate_right();
-        delay(10);
+        delay(30);
         STOP();
-      }else{
+      } else if (leftDistance < rightDistance) {
         rotate_left();
-        delay(10);
+        delay(30);
         STOP();
       }
-      while ((leftDistance + rightDistance)/2 <= 30) {
+      delay(10);
+      measure();
+      while ((leftDistance + rightDistance) / 2 <= 35) {
         BACK();
         delay(20);
         STOP();
         measure();
-        delay(30);
-      }
-      if (leftDistance <= rightDistance - 7){
-        right = true;
-        break;
-      }
-      if (leftDistance >= rightDistance + 7){
-        left = true;
-        break;
-      }
-      if (leftDistance > rightDistance){
-        rotate_right();
         delay(10);
-        STOP();
-      }else{
-        rotate_left();
-        delay(10);
-        STOP();
-      }
-      delay(30);
-      while ((leftDistance + rightDistance)/2 >= 50) {
-        ADVANCE();
-        delay(20);
-        STOP();
-        measure();
-        delay(30);
-      }
-      if (leftDistance <= rightDistance - 7){
-        right = true;
-        break;
-      }
-      if (leftDistance >= rightDistance + 7){
-        left = true;
-        break;
-      }
-      if (leftDistance > rightDistance){
-        rotate_right();
-        delay(10);
-        STOP();
-      }else{
-        rotate_left();
-        delay(10);
-        STOP();
-      }
-      delay(30);
-      measure();
-      if (leftDistance <= rightDistance - 7){
-        right = true;
-        break;
-      }
-      if (leftDistance >= rightDistance + 7){
-        left = true;
-        break;
       }
     }
+    measure();
+    LEFT();
+    delay(40);
+    STOP();
+    delay(20);
     newDistance = leftDistance;
   }
 
@@ -425,108 +430,117 @@ void loop()
   measure();
 
   if (left) {
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 20; i++) {
       RIGHT();
-      delay(40);
-      STOP();
-      measure();
       delay(30);
+      STOP();
+      if (i%3 == 0 && i) {
+        rotate_right();
+        delay(10);
+        STOP();
+      }
+      measure();
+      delay(50);
     }
-    while(1){
+    while (1) {
       measure();
       RIGHT();
-      delay(40);
+      delay(50);
       STOP();
       measure();
-      if (rightDistance <= leftDistance - 7){
+      if (rightDistance <= leftDistance - 7) {
         break;
       }
-     while((abs(leftDistance - rightDistance) >= 2)){
-      while ((leftDistance + rightDistance)/2 <= 30) {
+      delay(10);
+      while (abs(leftDistance - rightDistance) >= 2 && abs(leftDistance - rightDistance <= 7)) {
+        if (leftDistance > rightDistance) {
+          rotate_right();
+          delay(20);
+          STOP();
+        } else if (leftDistance < rightDistance) {
+          rotate_left();
+          delay(20);
+          STOP();
+        }
+        delay(40);
+      measure();
+      while ((leftDistance + rightDistance) / 2 <= 35) {
         BACK();
         delay(20);
         STOP();
         measure();
-        delay(30);
+        delay(5);
       }
-      if (rightDistance <= leftDistance - 7) {
-        break;
       }
-      if (leftDistance > rightDistance){
-        rotate_right();
-        delay(10);
-        STOP();
-      }else{
-        rotate_left();
-        delay(10);
-        STOP();
-      }
-      delay(30);
-      while ((leftDistance + rightDistance)/2 >= 50) {
-        ADVANCE();
-        delay(20);
-        STOP();
-        measure();
-        delay(30);
-      }
-      if (rightDistance <= leftDistance - 7) {
-        break;
-      }
-      if (leftDistance > rightDistance){
-        rotate_right();
-        delay(10);
-        STOP();
-      }else{
-        rotate_left();
-        delay(10);
-        STOP();
-      }
-      delay(30);
       measure();
-      if (rightDistance <= leftDistance - 7) {
-        break;
-      }
+      newDistance = rightDistance;
     }
-    newDistance = rightDistance;
   }
+
 
   STOP();
   statusprint(4);
   measure();
 
   if (left) {
-    for (int i = 0; i<=7; i++) {
+    inDistance = rightDistance;
+    int count = 0;
+    while (abs(leftDistance - rightDistance) >= 3) {
+      count++;
       RIGHT();
       delay(20);
+      if (count % 3 == 0) {
+        rotate_right();
+        delay(15);
+      }
       STOP();
-      delay(30);
+      delay(20);
+      measure();
     }
-  }
+  } 
   else if (right) {
-    for (int i = 0; i<=7; i++) {
+    for (int i = 0; i < 4; i++) {
+      BACK();
+      delay(15);
+      STOP();
+      delay(50);
+    }
+    inDistance = leftDistance;
+    int count = 0;
+    while (abs(leftDistance - rightDistance) >= 3) {
+      count++;
       LEFT();
       delay(20);
+      if (count % 3 == 0) {
+        rotate_left();
+        delay(15);
+      }
       STOP();
-      delay(30);
+      delay(20);
+      measure();
+
     }
+  } 
+  else {
+    errorprint();
   }
 
   STOP();
   statusprint(5);
   measure();
 
-  while (ina.readBusVoltage() <= 5.2 && (leftDistance + rightDistance) / 2 >= 2) {
-    while((abs(leftDistance - rightDistance) >= 2)){
-      if (leftDistance > rightDistance){
+  while (ina.readBusVoltage() <= 5.0 && leftDistance >= 2  && rightDistance >= 2) {
+    while ((abs(leftDistance - rightDistance) >= 2)) {
+      if (leftDistance > rightDistance) {
         rotate_right();
-        delay(10);
+        delay(20);
         STOP();
-      }else{
+      } else {
         rotate_left();
-        delay(10);
+        delay(20);
         STOP();
       }
-      delay(30);
+      delay(50);
       measure();
     }
     ADVANCE();
@@ -548,11 +562,10 @@ void loop()
 
   STOP();
   exitprint();
-
-}
 }
 
-int measure_left_distance(){
+
+int measure_left_distance() {
   unsigned long leftDuration;
 
   digitalWrite(leftTriggerPin, LOW);
@@ -560,7 +573,7 @@ int measure_left_distance(){
   digitalWrite(leftTriggerPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(leftTriggerPin, LOW);
-  
+
   leftDuration = pulseIn(leftEchoPin, HIGH);
   int leftD = (leftDuration / 2.0) / 29.1;
 
@@ -575,9 +588,9 @@ int measure_right_distance() {
   digitalWrite(rightTriggerPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(rightTriggerPin, LOW);
-  
+
   rightDuration = pulseIn(rightEchoPin, HIGH);
-  int rightD = (rightDuration/2.0) / 29.1;
+  int rightD = (rightDuration / 2.0) / 29.1;
 
   return rightD;
 }
@@ -590,7 +603,6 @@ int measure_fine_left_distance() {
   digitalWrite(fineLeftTriggerPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(fineLeftTriggerPin, LOW);
-  Serial.println(leftDuration);
   leftDuration = pulseIn(fineLeftEchoPin, HIGH);
   int leftD = (leftDuration / 2.0) / 29.1;
   return leftD;
@@ -604,31 +616,14 @@ int measure_fine_right_distance() {
   digitalWrite(fineRightTriggerPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(fineRightTriggerPin, LOW);
-  
+
   rightDuration = pulseIn(fineRightEchoPin, HIGH);
   int rightD = (rightDuration / 2.0) / 29.1;
 
   return rightD;
 }
 
-void accurate_measure() { // The last measurement.
-  int leftM = 0;
-  int rightM = 0;
-
-  for (int i = 0; i < 3; i++) {
-    leftM = leftM + measure_left_distance();
-    rightM = rightM + measure_right_distance();
-    delay(100);
-  }
-
-  // leftDistance = leftM / 3;
-  // rightDistance = rightM / 3;
-  leftDistance = leftM / 3;
-  rightDistance = rightM / 3;
-}
-
 void measure() {
-  Serial.println("measure");
   int leftM = 0;
   int rightM = 0;
   int fineLeftM = 0;
@@ -639,29 +634,32 @@ void measure() {
     rightM = rightM + measure_right_distance();
     fineLeftM = fineLeftM + measure_fine_left_distance();
     fineRightM = fineRightM + measure_fine_right_distance();
-    delay(20);
   }
 
+  if (leftM / 3 >= 200 || rightM / 3 >= 200) {
+    return;
+  }
   leftDistance = leftM / 3;
   rightDistance = rightM / 3;
   fineLeftDistance = fineLeftM / 3;
   fineRightDistance = fineRightM / 3;
-  
+
   currentShuntVoltage = ina.readBusVoltage();
   // int_left=(analogRead(A0)-int_adc0_c)/int_adc0_m;
-  // int_right=(analogRead(A1)-int_adc1_c)/int_adc1_m; 
+  // int_right=(analogRead(A1)-int_adc1_c)/int_adc1_m;
 
   ledprint();
+  bluetoothprint();
 }
 
 void ledprint() {
   Serial.println("ledprint");
   display.clearDisplay();
-  display.setTextSize(1);      // Normal 1:1 pixel scale
+  display.setTextSize(1);  // Normal 1:1 pixel scale
   // display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(0,0);     // Start at top-left corner
+  display.cp437(true);      // Use full 256 char 'Code Page 437' font
+  display.setCursor(0, 0);  // Start at top-left corner
   display.print("left: ");
   display.print(leftDistance);
   display.println("");
@@ -673,21 +671,19 @@ void ledprint() {
   // display.println("");
   // display.print("fright: ");
   // display.print(fineRightDistance);
-  // Serial.println(leftDistance);
-  // Serial.println(rightDistance);
-  // Serial.println(fineLeftDistance);
-  // Serial.println(fineRightDistance);
+  Serial.println(leftDistance);
+  Serial.println(rightDistance);
+  Serial.println(fineLeftDistance);
+  Serial.println(fineRightDistance);
   // display.println("");
   display.print("BVoltage: ");
   display.print(currentShuntVoltage);
   display.println("");
   if (left) {
     display.print(" to right");
-  }
-  else if (right) {
+  } else if (right) {
     display.println(" to left");
-  }
-  else {
+  } else {
     display.println(" wtf");
   }
   display.display();
@@ -695,26 +691,26 @@ void ledprint() {
 
 void statusprint(int stage) {
   display.clearDisplay();
-  display.setTextSize(2);      // Normal 1:1 pixel scale
+  display.setTextSize(2);  // Normal 1:1 pixel scale
   // display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(0,0);     // Start at top-left corner
+  display.cp437(true);      // Use full 256 char 'Code Page 437' font
+  display.setCursor(0, 0);  // Start at top-left corner
   display.print("stage ");
   display.print(stage);
   display.print(" finished");
   display.println("");
   display.display();
-  delay(5000);
+  delay(2000);
 }
 
 void exitprint() {
   display.clearDisplay();
-  display.setTextSize(2);      // Normal 1:1 pixel scale
+  display.setTextSize(2);  // Normal 1:1 pixel scale
   // display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(0,0);     // Start at top-left corner
+  display.cp437(true);      // Use full 256 char 'Code Page 437' font
+  display.setCursor(0, 0);  // Start at top-left corner
   display.println("EXIT");
   display.display();
   delay(10000);
@@ -722,11 +718,11 @@ void exitprint() {
 
 void voltageprint() {
   display.clearDisplay();
-  display.setTextSize(1);      // Normal 1:1 pixel scale
+  display.setTextSize(1);  // Normal 1:1 pixel scale
   // display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(0,0);     // Start at top-left corner
+  display.cp437(true);      // Use full 256 char 'Code Page 437' font
+  display.setCursor(0, 0);  // Start at top-left corner
   display.print("Bus voltage: ");
   display.println(currentShuntVoltage);
   display.display();
@@ -735,12 +731,21 @@ void voltageprint() {
 
 void errorprint() {
   display.clearDisplay();
-  display.setTextSize(2);      // Normal 1:1 pixel scale
+  display.setTextSize(2);  // Normal 1:1 pixel scale
   // display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setTextColor(SSD1306_WHITE);
-  display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  display.setCursor(0,0);     // Start at top-left corner
+  display.cp437(true);      // Use full 256 char 'Code Page 437' font
+  display.setCursor(0, 0);  // Start at top-left corner
   display.println("ERROR");
   display.display();
   delay(10000);
+}
+
+void bluetoothprint() {
+  Serial3.print("left distance: ");
+  Serial3.print(leftDistance);
+  Serial3.println("");
+  Serial3.print("right distance: ");
+  Serial3.print(rightDistance);
+  Serial3.println("");
 }
