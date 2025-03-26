@@ -339,202 +339,147 @@ void setup() {
   // left or right side to start
   delay(1000);
   ledprint();
-  Serial.println("GOOD");
 }
 
 void loop() {
   measure();
-  while (1) {
-    measure();
-    rotate_left();
-    delay(20);
-    STOP();
-    if (abs(leftDistance - rightDistance) <= 2 && leftDistance <= 100 && fineLeftDistance >= fineThreshold && fineRightDistance >= fineThreshold) {
-      // LEFT();
-      // delay(30);
-      // STOP();
-      break;
+  while (abs(leftDistance - rightDistance) > 2) {
+    if (leftDistance < rightDistance) {
+      rotate_left();
+      delay(20);
+      STOP();
+      delay(10);
     }
-    delay(50);
+    else {
+      rotate_right();
+      delay(20);
+      STOP();
+      delay(10);
+    }
   }
 
   STOP();
   statusprint(1);
 
   //move forward
-  while ((leftDistance + rightDistance) / 2 >= 50) {
+  do {
     ADVANCE();
-    delay(30);
+    delay(20);
     STOP();
     while ((abs(leftDistance - rightDistance) >= 2)) {
-    if (leftDistance > rightDistance) {
-      rotate_right();
-      delay(10);
-      STOP();
-    } else {
-      rotate_left();
-      delay(10);
-      STOP();
-    }
-      delay(30);
-      measure();
-    }
-    measure();
-    delay(40);
-  }
-
-  STOP();
-  statusprint(2);
-
-  //left and right move
-  firstDistance = (leftDistance + rightDistance) / 2;
-  while (1) {
-    measure();
-    if (leftDistance <= rightDistance - 8) {
-      
-      right = true;
-      Cstatusprint(1, leftDistance, rightDistance);
-      break;
-    }
-    if (leftDistance >= rightDistance + 7) {
-      left = true;
-      Cstatusprint(2, leftDistance, rightDistance);
-
-      break;
-    }
-    while ((abs(leftDistance - rightDistance) >= 1)) {
       if (leftDistance > rightDistance) {
         rotate_right();
         delay(10);
         STOP();
-      } else if (leftDistance < rightDistance) {
+      } else {
         rotate_left();
         delay(10);
         STOP();
       }
-      delay(100);
-      measure();
-      while ((leftDistance + rightDistance) / 2 <= 35) {
-        BACK();
-        delay(20);
-        STOP();
-        measure();
         delay(10);
-      }
+        measure();
     }
     measure();
-    LEFT();
-    delay(40);
-    STOP();
-    delay(20);
-    newDistance = leftDistance;
-  }
+    delay(10);
+  } while((leftDistance + rightDistance) / 2 > 5)
 
+  left = fineRightDistance < fineLeftDistance;
+  right = !left;
+
+  STOP();
+  statusprint(2);
+  measure();
+
+  do {
+    BACK();
+    delay(30);
+    STOP();
+    while ((abs(leftDistance - rightDistance) >= 2)) {
+      if (leftDistance > rightDistance) {
+        rotate_right();
+        delay(10);
+        STOP();
+      } else {
+        rotate_left();
+        delay(10);
+        STOP();
+      }
+        delay(10);
+        measure();
+    }
+    measure();
+  } while ((leftDistance + rightDistance) / 2 <= 25)
+
+  STOP();
   statusprint(3);
   measure();
 
   if (left) {
-    for (int i = 0; i < 20; i++) {
+    while (!(rightDistance <= leftDistance - 7)) {
       RIGHT();
       delay(30);
       STOP();
-      if (i%3 == 0 && i) {
-        rotate_right();
-        delay(10);
-        STOP();
-      }
-      measure();
-      delay(50);
-    }
-    while (1) {
-      measure();
-      RIGHT();
-      delay(50);
-      STOP();
-      measure();
-      if (rightDistance <= leftDistance - 7) {
-        break;
-      }
-      delay(10);
-      while (abs(leftDistance - rightDistance) >= 1 && abs(leftDistance - rightDistance <= 7)) {
+      while ((abs(leftDistance - rightDistance) >= 2)) {
         if (leftDistance > rightDistance) {
           rotate_right();
-          delay(20);
+          delay(10);
           STOP();
-        } else if (leftDistance < rightDistance) {
+        } else {
           rotate_left();
-          delay(20);
+          delay(10);
           STOP();
         }
-        delay(100);
-      measure();
-      while ((leftDistance + rightDistance) / 2 <= 35) {
-        BACK();
-        delay(20);
-        STOP();
-        measure();
-        delay(5);
-      }
+          delay(10);
+          measure();
       }
       measure();
-      newDistance = rightDistance;
     }
   }
-
+  else {
+    while (!(leftDistance <= rightDistance - 7)) {
+      RIGHT();
+      delay(30);
+      STOP();
+      while ((abs(leftDistance - rightDistance) >= 2)) {
+        if (leftDistance > rightDistance) {
+          rotate_right();
+          delay(10);
+          STOP();
+        } else {
+          rotate_left();
+          delay(10);
+          STOP();
+        }
+          delay(10);
+          measure();
+      }
+      measure();
+    }
+  }
 
   STOP();
   statusprint(4);
   measure();
 
+  inDistance = left ? rightDistance : leftDistance;s
   if (left) {
-    inDistance = rightDistance;
-    int count = 0;
-    while (abs(leftDistance - rightDistance) >= 3) {
-      count++;
+    while (leftDistance >= inDistance + 7) {
       RIGHT();
       delay(20);
-      if (count % 3 == 0) {
-        rotate_right();
-        delay(15);
-      }
       STOP();
-      delay(20);
+      delay(10);
       measure();
     }
-  } 
-  else if (right) {
-    for (int i = 0; i < 2; i++) {
-      BACK();
-      delay(15);
-      STOP();
-      delay(50);
-    }
-    for (int i = 0; i < 3; i++) {
-      LEFT();
-      delay(15);
-      STOP();
-      delay(50);
-    }
-    inDistance = leftDistance;
-    int count = 0;
-    while (abs(leftDistance - rightDistance) >= 3) {
-      count++;
-      LEFT();
-      delay(20);
-      if (count % 3 == 0) {
-        rotate_left();
-        delay(15);
-      }
-      STOP();
-      delay(20);
-      measure();
-
-    }
-  } 
-  else {
-    errorprint();
   }
-
+  else {
+    while (rightDistance >= inDistance + 7) {
+      LEFT();
+      delay(20);
+      STOP();
+      delay(10);
+      measure();
+    }
+  }
   STOP();
   statusprint(5);
   measure();
@@ -662,6 +607,12 @@ void measure() {
   bluetoothprint();
 }
 
+void photoresistorMeasure() {
+  int_adc0 = analogRead(A0);
+  int_adc1 = analogRead(A2);
+  photoresistorprint();
+}
+
 void ledprint() {
   Serial.println("ledprint");
   display.clearDisplay();
@@ -676,19 +627,19 @@ void ledprint() {
   display.print("right: ");
   display.print(rightDistance);
   display.println("");
-  // display.print("fleft: ");
-  // display.print(fineLeftDistance);
-  // display.println("");
-  // display.print("fright: ");
-  // display.print(fineRightDistance);
+  display.print("fleft: ");
+  display.print(fineLeftDistance);
+  display.println("");
+  display.print("fright: ");
+  display.print(fineRightDistance);
   Serial.println(leftDistance);
   Serial.println(rightDistance);
   Serial.println(fineLeftDistance);
   Serial.println(fineRightDistance);
   // display.println("");
-  display.print("BVoltage: ");
-  display.print(currentShuntVoltage);
-  display.println("");
+  // display.print("BVoltage: ");
+  // display.print(currentShuntVoltage);
+  // display.println("");
   if (left) {
     display.print(" to right");
   } else if (right) {
@@ -772,6 +723,21 @@ void Cstatusprint(int stage, int left, int right) {
   display.print(right);
   display.print(" Check");
   display.println("");
+  display.display();
+  delay(2000);
+}
+
+void photoresistorprint() {
+  display.clearDisplay();
+  display.setTextSize(1);  // Normal 1:1 pixel scale
+  // display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);      // Use full 256 char 'Code Page 437' font
+  display.setCursor(0, 0);  // Start at top-left corner
+  display.print("left int: ");
+  display.println(int_adc0);
+  display.print("right int: ");
+  display.println(int_adc1);
   display.display();
   delay(2000);
 }
