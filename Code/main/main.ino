@@ -230,7 +230,7 @@ void ADVANCE() {
 
 void LEFT() {
   MOTORA_BACKOFF(A_PWM);
-  MOTORB_FORWARD(B_PWM);
+  MOTORB_FORWARD(1230);
   MOTORC_FORWARD(C_PWM);
   MOTORD_BACKOFF(D_PWM);
 }
@@ -366,19 +366,19 @@ void loop() {
     ADVANCE();
     delay(30);
     STOP();
-    // while ((abs(leftDistance - rightDistance) >= 2)) {
-    // if (leftDistance > rightDistance) {
-    //   rotate_right();
-    //   delay(10);
-    //   STOP();
-    // } else {
-    //   rotate_left();
-    //   delay(10);
-    //   STOP();
-    // }
-    //   delay(30);
-    //   measure();
-    // }
+    while ((abs(leftDistance - rightDistance) >= 2)) {
+    if (leftDistance > rightDistance) {
+      rotate_right();
+      delay(10);
+      STOP();
+    } else {
+      rotate_left();
+      delay(10);
+      STOP();
+    }
+      delay(30);
+      measure();
+    }
     measure();
     delay(40);
   }
@@ -390,25 +390,29 @@ void loop() {
   firstDistance = (leftDistance + rightDistance) / 2;
   while (1) {
     measure();
-    if (leftDistance <= rightDistance - 7) {
+    if (leftDistance <= rightDistance - 8) {
+      
       right = true;
+      Cstatusprint(1, leftDistance, rightDistance);
       break;
     }
     if (leftDistance >= rightDistance + 7) {
       left = true;
+      Cstatusprint(2, leftDistance, rightDistance);
+
       break;
     }
-    while ((abs(leftDistance - rightDistance) >= 2)) {
+    while ((abs(leftDistance - rightDistance) >= 1)) {
       if (leftDistance > rightDistance) {
         rotate_right();
-        delay(30);
+        delay(10);
         STOP();
       } else if (leftDistance < rightDistance) {
         rotate_left();
-        delay(30);
+        delay(10);
         STOP();
       }
-      delay(10);
+      delay(100);
       measure();
       while ((leftDistance + rightDistance) / 2 <= 35) {
         BACK();
@@ -452,7 +456,7 @@ void loop() {
         break;
       }
       delay(10);
-      while (abs(leftDistance - rightDistance) >= 2 && abs(leftDistance - rightDistance <= 7)) {
+      while (abs(leftDistance - rightDistance) >= 1 && abs(leftDistance - rightDistance <= 7)) {
         if (leftDistance > rightDistance) {
           rotate_right();
           delay(20);
@@ -462,7 +466,7 @@ void loop() {
           delay(20);
           STOP();
         }
-        delay(40);
+        delay(100);
       measure();
       while ((leftDistance + rightDistance) / 2 <= 35) {
         BACK();
@@ -499,8 +503,14 @@ void loop() {
     }
   } 
   else if (right) {
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 2; i++) {
       BACK();
+      delay(15);
+      STOP();
+      delay(50);
+    }
+    for (int i = 0; i < 3; i++) {
+      LEFT();
       delay(15);
       STOP();
       delay(50);
@@ -748,4 +758,20 @@ void bluetoothprint() {
   Serial3.print("right distance: ");
   Serial3.print(rightDistance);
   Serial3.println("");
+}
+
+void Cstatusprint(int stage, int left, int right) {
+  display.clearDisplay();
+  display.setTextSize(2);  // Normal 1:1 pixel scale
+  // display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);      // Use full 256 char 'Code Page 437' font
+  display.setCursor(0, 0);  // Start at top-left corner
+  display.print(stage);
+  display.print(left);
+  display.print(right);
+  display.print(" Check");
+  display.println("");
+  display.display();
+  delay(2000);
 }
