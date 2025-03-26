@@ -509,11 +509,11 @@ void loop()
     while (leftDistance >= inDistance + 7)
     {
       RIGHT();
-      delay(10);
+      delay(20);
       STOP();
       delay(30);
       measure();
-      if (leftDistance <= inDistance + 5){
+      if (rightDistance <= inDistance + 5){
         BACK();
         delay(20);
         STOP();
@@ -525,11 +525,11 @@ void loop()
     while (rightDistance >= inDistance + 7)
     {
       LEFT();
-      delay(10);
+      delay(20);
       STOP();
       delay(30);
       measure();
-      if (rightDistance <= inDistance + 5){
+      if (leftDistance <= inDistance + 5){
         BACK();
         delay(20);
         STOP();
@@ -540,7 +540,7 @@ void loop()
   statusprint(5);
   measure();
 
-  while (leftDistance >= 2 && rightDistance >= 2)
+  while (leftDistance >= 6 && rightDistance >= 6)
   {
     while ((abs(leftDistance - rightDistance) >= 2))
     {
