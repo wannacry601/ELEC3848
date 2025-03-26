@@ -166,7 +166,7 @@ int MIN_VALUE = 300;
   } while (0)
 
 #define SERIAL Serial
-#define BTSERIAL Serial3
+#define BTSERIAL Serial2
 
 #define LOG_DEBUG
 
@@ -196,8 +196,8 @@ int B_rotate_PWM = 1200;  // right front
 int C_rotate_PWM = 1200;   // left back
 int D_rotate_PWM = 1200;   // right back
 
-float targetShuntVoltage = 5.0;
-float currentShuntVoltage = 0;
+float targetBusVoltage = 5.2;
+float currentBusVoltage = 0;
 
 //variables for light intensity to ADC reading equations
 int int_adc0, int_adc0_m, int_adc0_c;
@@ -301,12 +301,13 @@ void setup() {
   Serial.println("3");
 
   // while (1) {
-  //   if (Serial3.available()) {
-  //     Serial.println("Bluetooth connected");
-  //     break;
+  //   if (Serial2.available()) {
+  //     //Serial.println("Bluetooth connected");
+  //     Serial.write(Serial2.read());
+  //     //break;
   //   }
   // }
-  Serial3.begin(115200);  // BT serial setup
+  Serial2.begin(9600);  // BT serial setup
 
   // Pan=PL4=>48, Tilt=PL5=>47
   // servo_pan.attach(48);
@@ -348,14 +349,14 @@ void loop() {
       rotate_left();
       delay(20);
       STOP();
-      delay(10);
     }
     else {
       rotate_right();
       delay(20);
       STOP();
-      delay(10);
     }
+    delay(50);
+    measure();
   }
 
   STOP();
@@ -376,12 +377,12 @@ void loop() {
         delay(10);
         STOP();
       }
-        delay(10);
-        measure();
+      delay(50);
+      measure();
     }
     measure();
-    delay(10);
-  } while((leftDistance + rightDistance) / 2 > 5)
+    delay(30);
+  } while((leftDistance + rightDistance) / 2 > 10);
 
   left = fineRightDistance < fineLeftDistance;
   right = !left;
@@ -408,7 +409,7 @@ void loop() {
         measure();
     }
     measure();
-  } while ((leftDistance + rightDistance) / 2 <= 25)
+  } while ((leftDistance + rightDistance) / 2 <= 25);
 
   STOP();
   statusprint(3);
@@ -417,7 +418,7 @@ void loop() {
   if (left) {
     while (!(rightDistance <= leftDistance - 7)) {
       RIGHT();
-      delay(30);
+      delay(20);
       STOP();
       while ((abs(leftDistance - rightDistance) >= 2)) {
         if (leftDistance > rightDistance) {
@@ -429,16 +430,17 @@ void loop() {
           delay(10);
           STOP();
         }
-          delay(10);
-          measure();
+        delay(10);
+        measure();
       }
+      delay(50);
       measure();
     }
   }
   else {
     while (!(leftDistance <= rightDistance - 7)) {
-      RIGHT();
-      delay(30);
+      LEFT();
+      delay(20);
       STOP();
       while ((abs(leftDistance - rightDistance) >= 2)) {
         if (leftDistance > rightDistance) {
@@ -450,9 +452,10 @@ void loop() {
           delay(10);
           STOP();
         }
-          delay(10);
-          measure();
+        delay(10);
+        measure();
       }
+      delay(50);
       measure();
     }
   }
@@ -461,13 +464,13 @@ void loop() {
   statusprint(4);
   measure();
 
-  inDistance = left ? rightDistance : leftDistance;s
+  inDistance = left ? rightDistance : leftDistance;
   if (left) {
     while (leftDistance >= inDistance + 7) {
       RIGHT();
       delay(20);
       STOP();
-      delay(10);
+      delay(30);
       measure();
     }
   }
@@ -476,7 +479,7 @@ void loop() {
       LEFT();
       delay(20);
       STOP();
-      delay(10);
+      delay(30);
       measure();
     }
   }
@@ -484,7 +487,7 @@ void loop() {
   statusprint(5);
   measure();
 
-  while (ina.readBusVoltage() <= 5.0 && leftDistance >= 2  && rightDistance >= 2) {
+  while (leftDistance >= 2  && rightDistance >= 2) {
     while ((abs(leftDistance - rightDistance) >= 2)) {
       if (leftDistance > rightDistance) {
         rotate_right();
@@ -503,8 +506,34 @@ void loop() {
     STOP();
     measure();
   }
-  voltageprint();
+
+  STOP();
   statusprint(6);
+  measure();
+  photoresistorMeasure();
+
+  while (currentBusVoltage < targetBusVoltage) {
+    if (int_left < int_right) {
+      RIGHT();
+      delay(10);
+      STOP();
+    }
+    else if (int_left > int_right) {
+      LEFT();
+      delay(10);
+      STOP();
+    }
+    delay(10);
+    photoresistorMeasure();
+  }
+  
+  STOP();
+  statusprint(7);
+  time = millis();
+  while (millis() - time <= 10000) {
+    measure();
+    voltageprint();
+  }
 
   //go backwards
   measure();
@@ -599,7 +628,7 @@ void measure() {
   fineLeftDistance = fineLeftM / 3;
   fineRightDistance = fineRightM / 3;
 
-  currentShuntVoltage = ina.readBusVoltage();
+  currentBusVoltage = ina.readBusVoltage();
   // int_left=(analogRead(A0)-int_adc0_c)/int_adc0_m;
   // int_right=(analogRead(A1)-int_adc1_c)/int_adc1_m;
 
@@ -608,9 +637,8 @@ void measure() {
 }
 
 void photoresistorMeasure() {
-  int_adc0 = analogRead(A0);
-  int_adc1 = analogRead(A2);
-  photoresistorprint();
+  int_left = analogRead(A0);
+  int_right = analogRead(A2);
 }
 
 void ledprint() {
@@ -638,7 +666,7 @@ void ledprint() {
   Serial.println(fineRightDistance);
   // display.println("");
   // display.print("BVoltage: ");
-  // display.print(currentShuntVoltage);
+  // display.print(currentBusVoltage);
   // display.println("");
   if (left) {
     display.print(" to right");
@@ -685,7 +713,7 @@ void voltageprint() {
   display.cp437(true);      // Use full 256 char 'Code Page 437' font
   display.setCursor(0, 0);  // Start at top-left corner
   display.print("Bus voltage: ");
-  display.println(currentShuntVoltage);
+  display.println(currentBusVoltage);
   display.display();
   delay(5000);
 }
@@ -703,12 +731,12 @@ void errorprint() {
 }
 
 void bluetoothprint() {
-  Serial3.print("left distance: ");
-  Serial3.print(leftDistance);
-  Serial3.println("");
-  Serial3.print("right distance: ");
-  Serial3.print(rightDistance);
-  Serial3.println("");
+  Serial2.print("left distance: ");
+  Serial2.print(leftDistance);
+  Serial2.println("");
+  Serial2.print("right distance: ");
+  Serial2.print(rightDistance);
+  Serial2.println("");
 }
 
 void Cstatusprint(int stage, int left, int right) {
@@ -735,9 +763,9 @@ void photoresistorprint() {
   display.cp437(true);      // Use full 256 char 'Code Page 437' font
   display.setCursor(0, 0);  // Start at top-left corner
   display.print("left int: ");
-  display.println(int_adc0);
+  display.println(int_left);
   display.print("right int: ");
-  display.println(int_adc1);
+  display.println(int_right);
   display.display();
   delay(2000);
 }
