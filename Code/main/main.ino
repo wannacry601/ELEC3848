@@ -300,13 +300,6 @@ void setup() {
   ina.calibrate(0.01, 4);
   Serial.println("3");
 
-  // while (1) {
-  //   if (Serial2.available()) {
-  //     //Serial.println("Bluetooth connected");
-  //     Serial.write(Serial2.read());
-  //     //break;
-  //   }
-  // }
   Serial2.begin(9600);  // BT serial setup
 
   // Pan=PL4=>48, Tilt=PL5=>47
@@ -380,9 +373,9 @@ void loop() {
       delay(50);
       measure();
     }
-    measure();
     delay(30);
-  } while((leftDistance + rightDistance) / 2 > 10);
+    measure();
+  } while((leftDistance + rightDistance) / 2 > 20);
 
   left = fineRightDistance < fineLeftDistance;
   right = !left;
@@ -393,7 +386,7 @@ void loop() {
 
   do {
     BACK();
-    delay(30);
+    delay(20);
     STOP();
     while ((abs(leftDistance - rightDistance) >= 2)) {
       if (leftDistance > rightDistance) {
@@ -405,7 +398,7 @@ void loop() {
         delay(10);
         STOP();
       }
-        delay(10);
+        delay(30);
         measure();
     }
     measure();
@@ -620,7 +613,7 @@ void measure() {
     fineRightM = fineRightM + measure_fine_right_distance();
   }
 
-  if (leftM / 3 >= 200 || rightM / 3 >= 200) {
+  if (leftM / 3 >= 100 || rightM / 3 >= 100) {
     return;
   }
   leftDistance = leftM / 3;
