@@ -208,7 +208,7 @@ int B_rotate_PWM = 1200; // right front
 int C_rotate_PWM = 1200; // left back
 int D_rotate_PWM = 1200; // right back
 
-float targetBusVoltage = 5.2;
+float targetBusVoltage = 5.15;
 float currentBusVoltage = 0;
 
 // variables for light intensity to ADC reading equations
@@ -466,6 +466,13 @@ void loop()
         delay(10);
         measure();
       }
+      while (leftDistance <= 27) {
+        BACK();
+        delay(20);
+        STOP();
+        delay(30);
+        measure();
+      }
       delay(50);
       measure();
     } while (!(rightDistance <= leftDistance - 7));
@@ -494,6 +501,13 @@ void loop()
         delay(10);
         measure();
       }
+      while (rightDistance <= 27) {
+        BACK();
+        delay(20);
+        STOP();
+        delay(30);
+        measure();
+      }
       delay(50);
       measure();
     } while (!(leftDistance <= rightDistance - 7));
@@ -506,34 +520,56 @@ void loop()
   inDistance = left ? rightDistance : leftDistance;
   if (left)
   {
-    while (leftDistance >= inDistance + 7)
+    while (leftDistance >= inDistance + 5)
     {
       RIGHT();
       delay(20);
       STOP();
       delay(30);
       measure();
-      if (rightDistance <= inDistance + 5){
+      if (rightDistance <= inDistance + 3){
         BACK();
-        delay(20);
+        delay(10);
         STOP();
+        delay(50);
       }
+      if (rightDistance >= inDistance + 6){
+        ADVANCE();
+        delay(10);
+        STOP();
+        delay(50);
+      }
+      rotate_right();
+      delay(15);
+      STOP();
+      delay(30);
     }
   }
   else
   {
-    while (rightDistance >= inDistance + 7)
+    while (rightDistance >= inDistance + 5)
     {
       LEFT();
       delay(20);
       STOP();
       delay(30);
       measure();
-      if (leftDistance <= inDistance + 5){
+      if (leftDistance <= inDistance + 3){
         BACK();
-        delay(20);
+        delay(10);
         STOP();
+        delay(50);
       }
+      if (leftDistance >= inDistance + 6){
+        ADVANCE();
+        delay(10);
+        STOP();
+        delay(50);
+      }
+      rotate_left();
+      delay(15);
+      STOP();
+      delay(30);
     }
   }
   STOP();
@@ -568,7 +604,6 @@ void loop()
   STOP();
   statusprint(6);
   measure();
-  photoresistorMeasure();
 
   while (currentBusVoltage < targetBusVoltage)
   {
@@ -584,8 +619,8 @@ void loop()
       delay(10);
       STOP();
     }
-    delay(10);
-    photoresistorMeasure();
+    delay(50);
+    measure();
   }
 
   STOP();
@@ -700,6 +735,8 @@ void measure()
   currentBusVoltage = ina.readBusVoltage();
   // int_left=(analogRead(A0)-int_adc0_c)/int_adc0_m;
   // int_right=(analogRead(A1)-int_adc1_c)/int_adc1_m;
+
+  photoresistorMeasure();
 
   ledprint();
   bluetoothprint();
