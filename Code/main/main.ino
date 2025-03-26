@@ -570,6 +570,10 @@ void loop()
       delay(15);
       STOP();
       delay(30);
+      if (leftDistance != inDistance){rotate_right();}
+      delay(15);
+      STOP();
+      delay(30);
     }
   }
   STOP();
@@ -605,21 +609,32 @@ void loop()
   statusprint(6);
   measure();
 
-  while (currentBusVoltage < targetBusVoltage)
+  while (currentBusVoltage < 3.2)
   {
-    if (int_left < int_right)
+    // if (int_left < int_right)
+    if (left)
     {
       RIGHT();
       delay(10);
       STOP();
     }
-    else if (int_left > int_right)
+    // else if (int_left > int_right)
+    else if (right)
     {
       LEFT();
       delay(10);
       STOP();
     }
     delay(50);
+    measure();
+  }
+
+  measure();
+  while (currentBusVoltage < targetBusVoltage && leftDistance >= 1 && rightDistance >= 1) {
+    ADVANCE();
+    delay(10);
+    STOP();
+    delay(30);
     measure();
   }
 
