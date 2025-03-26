@@ -615,6 +615,7 @@ void loop()
   statusprint(6);
   measure();
 
+  int count_7 = 0;
   while (currentBusVoltage < 3.2)
   {
     // if (int_left < int_right)
@@ -623,6 +624,7 @@ void loop()
       RIGHT();
       delay(10);
       STOP();
+      count_7 +=1;
     }
     // else if (int_left > int_right)
     else if (right)
@@ -630,9 +632,15 @@ void loop()
       LEFT();
       delay(10);
       STOP();
+      count_7 +=1;
     }
     delay(50);
     measure();
+    if (count_7 == 10){
+      ADVANCE();
+      delay(10);
+      STOP();
+    }
   }
 
   measure();
@@ -873,16 +881,40 @@ void bluetoothprint()
 {
   Serial2.print("Current stage: ");
   Serial2.println(currentStage);
-  Serial2.print("left distance: ");
+
+  if (left)
+  {
+    Serial2.println("To the right");
+  }
+  else if (right) {
+    Serial2.println("To the left");
+  }
+  else {
+    Serial2.println("Direction undecided");
+  }
+  
+  Serial2.print("left front distance: ");
   Serial2.print(leftDistance);
   Serial2.println("");
-  Serial2.print("right distance: ");
+
+  Serial2.print("right front distance: ");
   Serial2.print(rightDistance);
   Serial2.println("");
+
+  Serial2.println("left distance: ");
+  Serial2.print(fineLeftDistance);
+  Serial2.println("");
+
+  Serial2.println("right distance: ");
+  Serial2.print(fineRightDistance);
+  Serial2.println("");
+
   Serial2.print("Bus voltage: ");
   Serial2.println(currentBusVoltage);
+
   Serial2.print("left intensity: ");
   Serial2.println(int_left);
+
   Serial2.print("right intensity: ");
   Serial2.println(int_right);
   Serial2.println("--------------------------------------");
