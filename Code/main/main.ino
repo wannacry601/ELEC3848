@@ -570,10 +570,16 @@ void loop()
       delay(15);
       STOP();
       delay(30);
-      if (leftDistance != inDistance){rotate_right();}
-      delay(15);
+      if (leftDistance != inDistance){
+        rotate_right();
+        delay(15);
+        ADVANCE();
+        delay(10);
+        STOP();
+      }
       STOP();
       delay(30);
+      measure();
     }
   }
   STOP();
