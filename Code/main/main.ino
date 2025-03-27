@@ -543,10 +543,27 @@ void loop()
       delay(15);
       STOP();
       delay(30);
+      if (rightDistance != inDistance){
+        rotate_left();
+        delay(5);
+        ADVANCE();
+        delay(10);
+        STOP();
+      }
+      STOP();
+      delay(30);
+      measure();
     }
   }
   else
   {
+    for (int i = 0; i<3;i++) {
+      LEFT();
+      delay(20);
+      STOP();
+      delay(30);
+      measure();
+    }
     while (rightDistance >= inDistance + 5)
     {
       LEFT();
@@ -586,7 +603,7 @@ void loop()
   statusprint(5);
   measure();
 
-  while (leftDistance >= 6 && rightDistance >= 6)
+  while (leftDistance >= 4 && rightDistance >= 4)
   {
     while ((abs(leftDistance - rightDistance) >= 2))
     {
@@ -636,9 +653,9 @@ void loop()
     }
     delay(50);
     measure();
-    if (count_7 == 10){
+    if (count_7 == 13){
       ADVANCE();
-      delay(10);
+      delay(15);
       STOP();
     }
   }
@@ -901,11 +918,11 @@ void bluetoothprint()
   Serial2.print(rightDistance);
   Serial2.println("");
 
-  Serial2.println("left distance: ");
+  Serial2.print("left distance: ");
   Serial2.print(fineLeftDistance);
   Serial2.println("");
 
-  Serial2.println("right distance: ");
+  Serial2.print("right distance: ");
   Serial2.print(fineRightDistance);
   Serial2.println("");
 
